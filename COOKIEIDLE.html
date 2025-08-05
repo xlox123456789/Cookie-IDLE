@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>奶油餅乾推推</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: #f8f3e6;
+    font-family: sans-serif;
+  }
+  /* 左上角小長方形計數器 */
+  #counter {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.9);
+    border: 2px solid #d2a679;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 18px;
+    color: #5c3b1e;
+    min-width: 120px;
+  }
+  #counter .icon {
+    width: 24px;
+    height: 24px;
+    background: burlywood;
+    border-radius: 50%;
+    border: 2px solid peru;
+  }
+
+  .cookie {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background: burlywood;
+    border-radius: 50%;
+    border: 2px solid peru;
+  }
+</style>
+</head>
+<body>
+
+<div id="counter">
+  <div class="icon"></div>
+  <span id="count">0</span>
+</div>
+
+<script>
+let count = 0;
+let cookies = [];
+
+// 初始生成一個餅乾
+spawnCookie();
+
+// 每 10 秒新增一個餅乾
+setInterval(spawnCookie, 10000);
+
+function spawnCookie() {
+  const cookie = document.createElement('div');
+  cookie.className = 'cookie';
+
+  // 隨機位置
+  cookie.style.left = Math.random() * (window.innerWidth - 30) + 'px';
+  cookie.style.top = Math.random() * (window.innerHeight - 30) + 'px';
+
+  document.body.appendChild(cookie);
+  cookies.push({el: cookie, vx: 0, vy: 0});
+}
+
+// 滑鼠靠近推動
+document.addEventListener('mousemove', e => {
+  const mouseX = e.clientX;
+  const mouseY = e.clientY;
+
+  cookies.forEach(c => {
+    const rect = c.el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    const dx = cx - mouseX;
+    const dy = cy - mouseY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist < 80) { // 滑鼠80px內推動
+      const force = (80 - dist) / 80 * 3;
+      const angle = Math.atan2(dy, dx);
+      c.vx += Math.cos(angle) * force;
+      c.vy += Math.sin(angle) * force;
+    }
+  });
+});
+
+// 更新餅乾位置與出界判定
+function update() {
+  cookies.forEach((c, i) => {
+    c.vx *= 0.95; // 摩擦
+    c.vy *= 0.95;
+    c.el.style.left = c.el.offsetLeft + c.vx + 'px';
+    c.el.style.top = c.el.offsetTop + c.vy + 'px';
+
+    // 出界判定
+    const rect = c.el.getBoundingClientRect();
+    if (
+      rect.right < 0 ||
+      rect.bottom < 0 ||
+      rect.left > window.innerWidth ||
+      rect.top > window.innerHeight
+    ) {
+      c.el.remove();
+      cookies.splice(i, 1);
+      count++;
+      document.getElementById('count').textContent = count;
+    }
+  });
+
+  requestAnimationFrame(update);
+}
+
+update();
+</script>
+
+</body>
+</html>
