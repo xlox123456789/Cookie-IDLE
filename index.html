@@ -5,6 +5,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>餅乾吃吃</title>
+
+  <!-- 強制瀏覽器不快取 HTML -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
   <style>
     body {
       margin: 0;
@@ -13,7 +19,6 @@
       font-family: sans-serif;
     }
 
-    /* 左上角小長方形計數器 */
     #counter {
       position: fixed;
       top: 10px;
@@ -39,17 +44,6 @@
       background-repeat: no-repeat;
     }
 
-    .cookie {
-      position: absolute;
-      width: 60px;
-      height: 60px;
-      background-image: url('cookie/cookie_butter.png');
-      background-size: cover;
-      background-repeat: no-repeat;
-      transition: transform 0.1s linear;
-    }
-
-    /* 左下角小按鈕 */
     #openButton {
       position: fixed;
       left: 10px;
@@ -68,7 +62,6 @@
       z-index: 11;
     }
 
-    /* UI 視窗 (無遮罩) */
     #popup {
       display: none;
       position: fixed;
@@ -83,7 +76,6 @@
       z-index: 20;
     }
 
-    /* 視窗右上角 X */
     #popup .closeBtn {
       position: absolute;
       top: 10px;
@@ -96,6 +88,7 @@
 </head>
 
 <body>
+  <canvas id="gameCanvas"></canvas>
 
   <div id="counter">
     <div class="icon"></div>
@@ -104,95 +97,124 @@
 
   <div id="openButton">UI</div>
 
-  <!-- 無遮罩的 UI 視窗 -->
   <div id="popup">
     <div class="closeBtn">X</div>
     <div style="padding: 20px;">這是 800 x 450 的 UI 視窗</div>
   </div>
 
   <script>
-    let count = 0;
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+
+    window.addEventListener('resize', () => {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
+    });
+
+    const cookieImg = new Image();
+    cookieImg.src = 'cookie/cookie_butter.png';
+
     let cookies = [];
+    let count = 0;
     let mouseX = 0;
     let mouseY = 0;
 
-    spawnCookie();
-    setInterval(spawnCookie, 10000);
+    class Cookie {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.scale = 1;
+        this.angle = 0;
+        this.follow = false;
+        this.absorbed = false;
+        this.offsetX = 0;
+        this.offsetY = 0;
+        this.shrinkTimer = 0;
+        this.size = 60;
+      }
 
-    function spawnCookie() {
-      const cookie = document.createElement('div');
-      cookie.className = 'cookie';
-      cookie.style.left = Math.random() * (window.innerWidth - 60) + 'px';
-      cookie.style.top = Math.random() * (window.innerHeight - 60) + 'px';
-      document.body.appendChild(cookie);
-
-      cookies.push({
-        el: cookie,
-        absorbed: false,
-        follow: false,
-        scale: 1,
-        angle: 0,
-        shrinkTimer: 0,
-        offsetX: 0,
-        offsetY: 0
-      });
-    }
-
-    document.addEventListener('mousemove', e => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
-    });
-
-    function update() {
-      const now = performance.now();
-
-      cookies.forEach((c, i) => {
-        const rect = c.el.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-
+      update() {
+        const cx = this.x + this.size / 2;
+        const cy = this.y + this.size / 2;
         const dx = mouseX - cx;
         const dy = mouseY - cy;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (!c.absorbed && !c.follow) {
+        if (!this.absorbed && !this.follow) {
           if (dist < 80 && dist > 30) {
-            // 吸引
             const moveDist = (80 - dist) / 80 * 5;
-            c.el.style.left = c.el.offsetLeft + dx / dist * moveDist + 'px';
-            c.el.style.top = c.el.offsetTop + dy / dist * moveDist + 'px';
+            this.x += (dx / dist) * moveDist;
+            this.y += (dy / dist) * moveDist;
           } else if (dist <= 30) {
-            // 開始跟隨滑鼠
-            c.follow = true;
-            c.absorbed = true;
-            c.shrinkTimer = now;
-            c.offsetX = cx - mouseX;
-            c.offsetY = cy - mouseY;
+            this.follow = true;
+            this.absorbed = true;
+            this.shrinkTimer = performance.now();
+            this.offsetX = cx - mouseX;
+            this.offsetY = cy - mouseY;
           }
-        } else if (c.follow) {
-          // 跟著滑鼠移動，保持相對偏移
-          c.el.style.left = mouseX + c.offsetX - rect.width / 2 + 'px';
-          c.el.style.top = mouseY + c.offsetY - rect.height / 2 + 'px';
+        } else if (this.follow) {
+          this.x = mouseX + this.offsetX - this.size / 2;
+          this.y = mouseY + this.offsetY - this.size / 2;
 
-          // 縮小 & 旋轉
-          const elapsed = (now - c.shrinkTimer) / 1000;
-          c.scale = Math.max(1 - elapsed * 0.1, 0);
-          c.angle += 10;
-          c.el.style.transform = `scale(${c.scale}) rotate(${c.angle}deg)`;
+          const elapsed = (performance.now() - this.shrinkTimer) / 1000;
+          this.scale = Math.max(1 - elapsed * 0.1, 0);
+          this.angle += 10;
+        }
+      }
 
-          if (c.scale <= 0) {
-            c.el.remove();
-            cookies.splice(i, 1);
-            count++;
-            document.getElementById('count').textContent = count;
-          }
+      draw() {
+        if (this.scale <= 0) return;
+        ctx.save();
+        const cx = this.x + this.size / 2;
+        const cy = this.y + this.size / 2;
+        ctx.translate(cx, cy);
+        ctx.rotate((this.angle * Math.PI) / 180);
+        ctx.scale(this.scale, this.scale);
+        ctx.drawImage(cookieImg, -this.size / 2, -this.size / 2, this.size, this.size);
+        ctx.restore();
+      }
+
+      isGone() {
+        return this.scale <= 0;
+      }
+    }
+
+    function spawnCookie() {
+      const x = Math.random() * (width - 60);
+      const y = Math.random() * (height - 60);
+      cookies.push(new Cookie(x, y));
+    }
+
+    document.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    });
+
+    function gameLoop() {
+      ctx.clearRect(0, 0, width, height);
+
+      cookies.forEach((cookie, i) => {
+        cookie.update();
+        cookie.draw();
+        if (cookie.follow && cookie.isGone()) {
+          cookies.splice(i, 1);
+          count++;
+          document.getElementById('count').textContent = count;
         }
       });
 
-      requestAnimationFrame(update);
+      requestAnimationFrame(gameLoop);
     }
 
-    update();
+    spawnCookie();
+    setInterval(spawnCookie, 10000);
+    gameLoop();
 
     // UI 視窗控制
     const popup = document.getElementById('popup');
@@ -200,7 +222,7 @@
     const closeBtn = document.querySelector('#popup .closeBtn');
 
     openButton.addEventListener('click', (e) => {
-      e.stopPropagation(); // 防止事件冒泡被視窗外點擊關閉
+      e.stopPropagation();
       popup.style.display = 'block';
     });
 
@@ -223,7 +245,6 @@
       }
     });
   </script>
-
 </body>
 
 </html>
