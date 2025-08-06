@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>奶油餅乾推推</title>
+  <title>餅乾吃吃</title>
   <style>
     body {
       margin: 0;
@@ -28,11 +28,12 @@
       font-size: 18px;
       color: #5c3b1e;
       min-width: 120px;
+      z-index: 10;
     }
 
     #counter .icon {
-      width: 24px;
-      height: 24px;
+      width: 30px;
+      height: 30px;
       background-image: url('cookie/cookie_butter.png');
       background-size: cover;
       background-repeat: no-repeat;
@@ -40,11 +41,56 @@
 
     .cookie {
       position: absolute;
-      width: 30px;
-      height: 30px;
+      width: 60px;
+      height: 60px;
       background-image: url('cookie/cookie_butter.png');
       background-size: cover;
       background-repeat: no-repeat;
+      transition: transform 0.1s linear;
+    }
+
+    /* 左下角小按鈕 */
+    #openButton {
+      position: fixed;
+      left: 10px;
+      bottom: 10px;
+      width: 40px;
+      height: 40px;
+      background: #d2a679;
+      color: white;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-weight: bold;
+      user-select: none;
+      z-index: 11;
+    }
+
+    /* UI 視窗 (無遮罩) */
+    #popup {
+      display: none;
+      position: fixed;
+      width: 800px;
+      height: 450px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 10px;
+      border: 2px solid #d2a679;
+      z-index: 20;
+    }
+
+    /* 視窗右上角 X */
+    #popup .closeBtn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 20px;
+      cursor: pointer;
+      user-select: none;
     }
   </style>
 </head>
@@ -56,71 +102,90 @@
     <span id="count">0</span>
   </div>
 
+  <div id="openButton">UI</div>
+
+  <!-- 無遮罩的 UI 視窗 -->
+  <div id="popup">
+    <div class="closeBtn">X</div>
+    <div style="padding: 20px;">這是 800 x 450 的 UI 視窗</div>
+  </div>
+
   <script>
     let count = 0;
     let cookies = [];
+    let mouseX = 0;
+    let mouseY = 0;
 
-    // 初始生成一個餅乾
     spawnCookie();
-
-    // 每 10 秒新增一個餅乾
     setInterval(spawnCookie, 10000);
 
     function spawnCookie() {
       const cookie = document.createElement('div');
       cookie.className = 'cookie';
-
-      // 隨機位置
-      cookie.style.left = Math.random() * (window.innerWidth - 30) + 'px';
-      cookie.style.top = Math.random() * (window.innerHeight - 30) + 'px';
-
+      cookie.style.left = Math.random() * (window.innerWidth - 60) + 'px';
+      cookie.style.top = Math.random() * (window.innerHeight - 60) + 'px';
       document.body.appendChild(cookie);
-      cookies.push({ el: cookie, vx: 0, vy: 0 });
+
+      cookies.push({
+        el: cookie,
+        absorbed: false,
+        follow: false,
+        scale: 1,
+        angle: 0,
+        shrinkTimer: 0,
+        offsetX: 0,
+        offsetY: 0
+      });
     }
 
-    // 滑鼠靠近推動
     document.addEventListener('mousemove', e => {
-      const mouseX = e.clientX;
-      const mouseY = e.clientY;
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    });
 
-      cookies.forEach(c => {
+    function update() {
+      const now = performance.now();
+
+      cookies.forEach((c, i) => {
         const rect = c.el.getBoundingClientRect();
         const cx = rect.left + rect.width / 2;
         const cy = rect.top + rect.height / 2;
 
-        const dx = cx - mouseX;
-        const dy = cy - mouseY;
+        const dx = mouseX - cx;
+        const dy = mouseY - cy;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist < 80) { // 滑鼠80px內推動
-          const force = (80 - dist) / 80 * 3;
-          const angle = Math.atan2(dy, dx);
-          c.vx += Math.cos(angle) * force;
-          c.vy += Math.sin(angle) * force;
-        }
-      });
-    });
+        if (!c.absorbed && !c.follow) {
+          if (dist < 80 && dist > 30) {
+            // 吸引
+            const moveDist = (80 - dist) / 80 * 5;
+            c.el.style.left = c.el.offsetLeft + dx / dist * moveDist + 'px';
+            c.el.style.top = c.el.offsetTop + dy / dist * moveDist + 'px';
+          } else if (dist <= 30) {
+            // 開始跟隨滑鼠
+            c.follow = true;
+            c.absorbed = true;
+            c.shrinkTimer = now;
+            c.offsetX = cx - mouseX;
+            c.offsetY = cy - mouseY;
+          }
+        } else if (c.follow) {
+          // 跟著滑鼠移動，保持相對偏移
+          c.el.style.left = mouseX + c.offsetX - rect.width / 2 + 'px';
+          c.el.style.top = mouseY + c.offsetY - rect.height / 2 + 'px';
 
-    // 更新餅乾位置與出界判定
-    function update() {
-      cookies.forEach((c, i) => {
-        c.vx *= 0.95; // 摩擦
-        c.vy *= 0.95;
-        c.el.style.left = c.el.offsetLeft + c.vx + 'px';
-        c.el.style.top = c.el.offsetTop + c.vy + 'px';
+          // 縮小 & 旋轉
+          const elapsed = (now - c.shrinkTimer) / 1000;
+          c.scale = Math.max(1 - elapsed * 0.1, 0);
+          c.angle += 10;
+          c.el.style.transform = `scale(${c.scale}) rotate(${c.angle}deg)`;
 
-        // 出界判定
-        const rect = c.el.getBoundingClientRect();
-        if (
-          rect.right < 0 ||
-          rect.bottom < 0 ||
-          rect.left > window.innerWidth ||
-          rect.top > window.innerHeight
-        ) {
-          c.el.remove();
-          cookies.splice(i, 1);
-          count++;
-          document.getElementById('count').textContent = count;
+          if (c.scale <= 0) {
+            c.el.remove();
+            cookies.splice(i, 1);
+            count++;
+            document.getElementById('count').textContent = count;
+          }
         }
       });
 
@@ -128,6 +193,35 @@
     }
 
     update();
+
+    // UI 視窗控制
+    const popup = document.getElementById('popup');
+    const openButton = document.getElementById('openButton');
+    const closeBtn = document.querySelector('#popup .closeBtn');
+
+    openButton.addEventListener('click', (e) => {
+      e.stopPropagation(); // 防止事件冒泡被視窗外點擊關閉
+      popup.style.display = 'block';
+    });
+
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      popup.style.display = 'none';
+    });
+
+    document.addEventListener('click', e => {
+      if (popup.style.display === 'block') {
+        const rect = popup.getBoundingClientRect();
+        if (
+          e.clientX < rect.left ||
+          e.clientX > rect.right ||
+          e.clientY < rect.top ||
+          e.clientY > rect.bottom
+        ) {
+          popup.style.display = 'none';
+        }
+      }
+    });
   </script>
 
 </body>
