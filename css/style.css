@@ -1,0 +1,90 @@
+/* 全域樣式、版面配置、按鈕、視窗樣式 */
+body {
+    margin: 0;
+    overflow: hidden;
+    background: #f8f3e6;
+    font-family: sans-serif;
+}
+
+/* 左上角計數器 */
+#counter {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid #d2a679;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 18px;
+    color: #5c3b1e;
+    z-index: 10;
+}
+
+#counter .icon {
+    width: 30px;
+    height: 30px;
+    background: url('../cookie/cookie_butter.png') center/cover no-repeat;
+}
+
+/* 左下角按鈕：200,160,100 邊框，白底，置中放餅乾圖 */
+#openButton {
+    position: fixed;
+    left: 10px;
+    bottom: 10px;
+    width: 30px;
+    height: 30px;
+    background: white;
+    border: 2px solid rgb(200, 160, 100);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 11;
+}
+
+#openButton img {
+    width: 40px;
+    height: 40px;
+}
+
+/* 商店視窗 */
+#popup {
+    display: none;
+    position: fixed;
+    width: 800px;
+    height: 450px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border: 2px solid #d2a679;
+    border-radius: 10px;
+    z-index: 20;
+    box-sizing: border-box;
+}
+
+#popup .closeBtn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 20px;
+    cursor: pointer;
+    user-select: none;
+}
+
+#popup h1 {
+    margin: 20px 0 10px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 24px;
+    color: #5c3b1e;
+}
+
+.shop-content {
+    padding: 20px;
+    text-align: center;
+}

@@ -5,233 +5,27 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>餅乾吃吃</title>
-
-  <!-- 強制瀏覽器不快取 HTML -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: #f8f3e6;
-      font-family: sans-serif;
-    }
-
-    /* 左上角計數器 */
-    #counter {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255, 255, 255, 0.9);
-      border: 2px solid #d2a679;
-      border-radius: 6px;
-      padding: 5px 10px;
-      font-size: 18px;
-      color: #5c3b1e;
-      z-index: 10;
-    }
-
-    #counter .icon {
-      width: 30px;
-      height: 30px;
-      background: url('cookie/cookie_butter.png') center/cover no-repeat;
-    }
-
-    /* 左下角按鈕：200,160,100 邊框，白底，置中放餅乾圖 */
-    #openButton {
-      position: fixed;
-      left: 10px;
-      bottom: 10px;
-      width: 30px;
-      height: 30px;
-      background: white;
-      border: 2px solid rgb(200, 160, 100);
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      z-index: 11;
-    }
-
-    #openButton img {
-      width: 40px;
-      height: 40px;
-    }
-
-    /* UI 視窗 */
-    #popup {
-      display: none;
-      position: fixed;
-      width: 800px;
-      height: 450px;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      border: 2px solid #d2a679;
-      border-radius: 10px;
-      z-index: 20;
-      box-sizing: border-box;
-    }
-
-    #popup .closeBtn {
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      font-size: 20px;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    #popup h1 {
-      margin: 20px 0 10px;
-      text-align: center;
-      font-weight: bold;
-      font-size: 24px;
-      color: #5c3b1e;
-    }
-  </style>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 
 <body>
-  <!-- Canvas 主遊戲區 -->
   <canvas id="gameCanvas"></canvas>
-
-  <!-- 左上角計數器 -->
   <div id="counter">
-    <div class="icon"></div>
-    <span id="count">0</span>
+    <div class="icon"></div><span id="count">0</span>
   </div>
-
-  <!-- 左下角按鈕（框+白底+餅乾圖） -->
-  <div id="openButton">
-    <img src="cookie/cookie_butter.png" alt="商店" />
-  </div>
-
-  <!-- 商店視窗 -->
+  <div id="openButton"><img src="cookie/cookie_butter.png" alt="商店" /></div>
   <div id="popup">
     <div class="closeBtn">X</div>
     <h1>奶油餅乾商店</h1>
-    <div style="padding:20px; text-align:center;">
-      這裡放升級選項或說明
-    </div>
+    <div class="shop-content">這裡放升級選項或說明</div>
   </div>
-
-  <script>
-    /* === Canvas 初始化 & 自適應縮放 === */
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    let width = window.innerWidth, height = window.innerHeight;
-    canvas.width = width; canvas.height = height;
-    window.addEventListener('resize', () => {
-      width = window.innerWidth; height = window.innerHeight;
-      canvas.width = width; canvas.height = height;
-    });
-
-    /* === 圖片預載，確保遊戲開始前載入完成 === */
-    const cookieImg = new Image();
-    cookieImg.src = 'cookie/cookie_butter.png';
-    cookieImg.onload = startGame;
-
-    /* === 遊戲狀態變數 === */
-    let cookies = [], count = 0, mouseX = 0, mouseY = 0;
-
-    /* === 餅乾類別：吸引、跟隨、縮小、旋轉 === */
-    class Cookie {
-      constructor(x, y) {
-        this.x = x; this.y = y; this.scale = 1; this.angle = 0;
-        this.follow = false; this.absorbed = false;
-        this.offsetX = 0; this.offsetY = 0; this.shrinkTimer = 0;
-        this.size = 60;
-      }
-      update() {
-        const cx = this.x + this.size / 2, cy = this.y + this.size / 2;
-        const dx = mouseX - cx, dy = mouseY - cy, dist = Math.hypot(dx, dy);
-        if (!this.absorbed && !this.follow) {
-          if (dist < 80 && dist > 30) {
-            const mv = (80 - dist) / 80 * 5;
-            this.x += (dx / dist) * mv; this.y += (dy / dist) * mv;
-          } else if (dist <= 30) {
-            this.follow = this.absorbed = true;
-            this.shrinkTimer = performance.now();
-            this.offsetX = cx - mouseX; this.offsetY = cy - mouseY;
-          }
-        } else if (this.follow) {
-          this.x = mouseX + this.offsetX - this.size / 2;
-          this.y = mouseY + this.offsetY - this.size / 2;
-          const elapsed = (performance.now() - this.shrinkTimer) / 1000;
-          this.scale = Math.max(1 - elapsed * 0.1, 0);
-          this.angle += 5; // 旋轉速度減半
-        }
-      }
-      draw() {
-        if (this.scale <= 0) return;
-        ctx.save();
-        const cx = this.x + this.size / 2, cy = this.y + this.size / 2;
-        ctx.translate(cx, cy);
-        ctx.rotate(this.angle * Math.PI / 180);
-        ctx.scale(this.scale, this.scale);
-        ctx.drawImage(cookieImg, -this.size / 2, -this.size / 2, this.size, this.size);
-        ctx.restore();
-      }
-      isGone() { return this.scale <= 0; }
-    }
-
-    /* === 產生新餅乾 (限 500 顆) === */
-    function spawnCookie() {
-      if (cookies.length >= 500) return;
-      const x = Math.random() * (width - 60), y = Math.random() * (height - 60);
-      cookies.push(new Cookie(x, y));
-    }
-
-    /* === 滑鼠位置追蹤 === */
-    document.addEventListener('mousemove', e => {
-      mouseX = e.clientX; mouseY = e.clientY;
-    });
-
-    /* === 遊戲主迴圈 === */
-    function gameLoop() {
-      ctx.clearRect(0, 0, width, height);
-      cookies.forEach((c, i) => {
-        c.update(); c.draw();
-        if (c.follow && c.isGone()) {
-          cookies.splice(i, 1);
-          document.getElementById('count').textContent = ++count;
-        }
-      });
-      requestAnimationFrame(gameLoop);
-    }
-
-    /* === 開始遊戲 === */
-    function startGame() {
-      spawnCookie();
-      setInterval(spawnCookie, 10000);
-      gameLoop();
-    }
-
-    /* === 商店視窗開關 === */
-    const popup = document.getElementById('popup');
-    document.getElementById('openButton').addEventListener('click', e => {
-      e.stopPropagation(); popup.style.display = 'block';
-    });
-    document.querySelector('#popup .closeBtn').addEventListener('click', e => {
-      e.stopPropagation(); popup.style.display = 'none';
-    });
-    document.addEventListener('click', e => {
-      if (popup.style.display === 'block') {
-        const r = popup.getBoundingClientRect();
-        if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) {
-          popup.style.display = 'none';
-        }
-      }
-    });
-  </script>
+  <script type="module" src="js/data.js"></script>
+  <script type="module" src="js/utils.js"></script>
+  <script type="module" src="js/core.js"></script>
+  <script type="module" src="js/ui.js"></script>
 </body>
 
 </html>
