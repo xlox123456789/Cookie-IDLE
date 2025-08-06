@@ -73,7 +73,7 @@ export class Cookie {
             this.y = mouseY + this.offsetY - this.size / 2;
             const elapsed = (performance.now() - this.shrinkTimer) / 1000;
             this.scale = Math.max(1 - elapsed * 0.1, 0);
-            this.angle += 5; // 旋轉速度：每幀 5°
+            this.angle += 1; // 旋轉速度：每幀 5°
         }
     }
 
