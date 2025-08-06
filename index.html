@@ -17,11 +17,29 @@
     <div class="icon"></div><span id="count">0</span>
   </div>
   <div id="openButton"><img src="cookie/cookie_butter.png" alt="商店" /></div>
+  <!-- 商店視窗（popup 內） -->
   <div id="popup">
     <div class="closeBtn">X</div>
     <h1>奶油餅乾商店</h1>
-    <div class="shop-content">這裡放升級選項或說明</div>
+    <div class="shop-content">
+      <!-- 升級：出現次數 -->
+      <div class="shop-item">
+        <div class="shop-label">奶油餅乾出現次數</div>
+        <div>LV.<span id="lv-count">0</span></div>
+        <div>花費 <span id="cost-count">10</span> 餅乾</div>
+        <button id="btn-count">+1</button>
+      </div>
+      <!-- 升級：出現速度 -->
+      <div class="shop-item">
+        <div class="shop-label">奶油餅乾出現速度</div>
+        <div>LV.<span id="lv-speed">0</span></div>
+        <div>花費 <span id="cost-speed">10</span> 餅乾</div>
+        <button id="btn-speed">+1</button>
+      </div>
+    </div>
   </div>
+
+
   <script type="module" src="js/data.js"></script>
   <script type="module" src="js/utils.js"></script>
   <script type="module" src="js/core.js"></script>

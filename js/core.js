@@ -15,7 +15,7 @@ export const cookieImg = new Image();
 cookieImg.src = 'cookie/cookie_butter.png';
 
 export let cookies = [];
-export let count = 0;
+window.count = 0;
 let mouseX = 0, mouseY = 0;
 
 // Cookie 類別
@@ -47,7 +47,7 @@ export class Cookie {
             this.y = mouseY + this.offsetY - this.size / 2;
             const elapsed = (performance.now() - this.shrinkTimer) / 1000;
             this.scale = Math.max(1 - elapsed * 0.1, 0);
-            this.angle += 5;
+            this.angle += 1;
         }
     }
     draw() {
@@ -84,8 +84,8 @@ function gameLoop() {
         c.update(); c.draw();
         if (c.follow && c.isGone()) {
             cookies.splice(i, 1);
-            count++;
-            document.getElementById('count').textContent = count;
+            window.count++;
+            document.getElementById('count').textContent = window.count;
         }
     });
     requestAnimationFrame(gameLoop);
