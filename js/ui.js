@@ -6,6 +6,7 @@ console.log('ui.js loaded');
 window.addEventListener('DOMContentLoaded', () => {
     // 1. 測試模式：初始 200 塊奶油餅乾
     window.count = 100000000;
+    window.count = 0;
     document.getElementById('count').textContent = formatNumber(window.count);
 
     // 2. 升級等級 & 最大值常數
