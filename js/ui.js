@@ -1,11 +1,12 @@
+// js/utils.js 已經 export function formatNumber
+
 // js/ui.js
 import { formatNumber } from './utils.js';
-
+import { spawnCompanion } from './companion.js';
 console.log('ui.js loaded');
 
 window.addEventListener('DOMContentLoaded', () => {
     // 1. 測試模式：初始 200 塊奶油餅乾
-    window.count = 100000000;
     window.count = 0;
     document.getElementById('count').textContent = formatNumber(window.count);
 
@@ -13,20 +14,24 @@ window.addEventListener('DOMContentLoaded', () => {
     const MAX_COUNT_LEVEL = 30;
     const MAX_SPEED_LEVEL = 50;
     const MAX_GAIN_LEVEL = 400;
-    const MAX_EAT_LEVEL = 30;  // 吃餅乾速度最高等級
+    const MAX_EAT_LEVEL = 30;
+    const MAX_SUMMON_LEVEL = 3;
 
+    // 讀取或初始化本地等級變數
     let butterCountLevel = window.butterCountLevel || 0;
     let butterSpeedLevel = window.butterSpeedLevel || 0;
     let butterGainLevel = window.butterGainLevel || 0;
     let eatSpeedLevel = window.eatSpeedLevel || 0;
+    let summonLevel = window.summonLevel || 0;
 
-    // 3. 更新商店 UI
+    // 3. 更新商店 UI：LV/最大、花費、按鈕狀態、左上角計數
     function updateShopUI() {
         // 同步全域等級
         window.butterCountLevel = butterCountLevel;
         window.butterSpeedLevel = butterSpeedLevel;
         window.butterGainLevel = butterGainLevel;
         window.eatSpeedLevel = eatSpeedLevel;
+        window.summonLevel = summonLevel;
 
         // 左上角計數
         document.getElementById('count').textContent = formatNumber(window.count);
@@ -36,18 +41,21 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('lv-speed').textContent = butterSpeedLevel;
         document.getElementById('lv-gain').textContent = butterGainLevel;
         document.getElementById('lv-eat').textContent = eatSpeedLevel;
+        document.getElementById('lv-summon').textContent = summonLevel;
 
-        // 計算各項花費
+        // 計算花費
         const costCount = Math.floor(10 * Math.pow(1.5, butterCountLevel));
         const costSpeed = Math.floor(10 * Math.pow(1.5, butterSpeedLevel));
         const costGain = Math.floor(500 * Math.pow(5, butterGainLevel));
         const costEat = Math.floor(100 * Math.pow(1.5, eatSpeedLevel));
+        const costSummon = Math.floor(200 * Math.pow(8, summonLevel));
 
-        // 顯示花費（大數字格式）
+        // 顯示花費
         document.getElementById('cost-count').textContent = formatNumber(costCount);
         document.getElementById('cost-speed').textContent = formatNumber(costSpeed);
         document.getElementById('cost-gain').textContent = formatNumber(costGain);
         document.getElementById('cost-eat').textContent = formatNumber(costEat);
+        document.getElementById('cost-summon').textContent = formatNumber(costSummon);
 
         // 按鈕狀態：出現次數
         const btnCount = document.getElementById('btn-count');
@@ -77,7 +85,7 @@ window.addEventListener('DOMContentLoaded', () => {
             btnSpeed.style.cursor = 'pointer';
         }
 
-        // 按鈕狀態：獲得量
+        // 按鈕狀態：獲得數量
         const btnGain = document.getElementById('btn-gain');
         if (butterGainLevel >= MAX_GAIN_LEVEL) {
             btnGain.disabled = true;
@@ -104,7 +112,23 @@ window.addEventListener('DOMContentLoaded', () => {
             btnEat.style.opacity = '1';
             btnEat.style.cursor = 'pointer';
         }
+
+        // 按鈕狀態：召喚小夥伴
+        const btnSummon = document.getElementById('btn-summon');
+        if (summonLevel >= MAX_SUMMON_LEVEL) {
+            btnSummon.disabled = true;
+            btnSummon.textContent = 'MAX';
+            btnSummon.style.opacity = '0.5';
+            btnSummon.style.cursor = 'default';
+        } else {
+            btnSummon.disabled = false;
+            btnSummon.textContent = '+1';
+            btnSummon.style.opacity = '1';
+            btnSummon.style.cursor = 'pointer';
+        }
     }
+
+    // 初次更新
     updateShopUI();
 
     // 4. 綁定「出現次數」升級
@@ -147,15 +171,24 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-eat').addEventListener('click', () => {
         if (eatSpeedLevel >= MAX_EAT_LEVEL) return;
         const cost = Math.floor(100 * Math.pow(1.5, eatSpeedLevel));
-        console.log('DEBUG: eatSpeedLevel =', eatSpeedLevel, ' raw costEat =', cost);
         if (window.count < cost) return;
         window.count -= cost;
         eatSpeedLevel++;
         updateShopUI();
-        // no need to reschedule spawn
     });
 
-    // 8. 商店開關邏輯
+    // 8. 綁定「召喚小夥伴」升級
+    document.getElementById('btn-summon').addEventListener('click', () => {
+        if (summonLevel >= MAX_SUMMON_LEVEL) return;
+        const cost = Math.floor(200 * Math.pow(8, summonLevel));
+        if (window.count < cost) return;
+        window.count -= cost;
+        summonLevel++;
+        updateShopUI();
+        spawnCompanion(window.innerWidth, window.innerHeight);
+    });
+
+    // 9. 商店開關邏輯
     const popup = document.getElementById('popup');
     const openBtn = document.getElementById('openButton');
     const closeBtn = document.querySelector('#popup .closeBtn');
@@ -181,4 +214,4 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-});
+}); // 這裡一定要有這個閉合
