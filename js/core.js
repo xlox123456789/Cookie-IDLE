@@ -71,9 +71,18 @@ export class Cookie {
             // 跟隨滑鼠、縮小、旋轉
             this.x = mouseX + this.offsetX - this.size / 2;
             this.y = mouseY + this.offsetY - this.size / 2;
+
             const elapsed = (performance.now() - this.shrinkTimer) / 1000;
-            this.scale = Math.max(1 - elapsed * 0.1, 0);
-            this.angle += 1; // 旋轉速度：每幀 1°
+
+            // 1. 取得當前「吃餅乾速度等級」
+            const eatSpeedLevel = window.eatSpeedLevel || 0;
+
+            // 2. 縮小速率 = 基礎 0.1 * (1 + eatSpeedLevel * 0.05)
+            const shrinkRate = 0.1 * (1 + eatSpeedLevel * 0.05);
+            this.scale = Math.max(1 - elapsed * shrinkRate, 0);
+
+            // 3. 旋轉速度 = 每幀 (1° + eatSpeedLevel °)
+            this.angle += 1 + eatSpeedLevel;
         }
     }
 
