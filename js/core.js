@@ -1,12 +1,12 @@
 // js/core.js
-
+import { formatNumber } from './utils.js';
 // ----------------------------------------------------
 // 1. 全域初始設定
 // ----------------------------------------------------
 window.count = 0;               // 玩家當前餅乾數
 window.butterCountLevel = 0;    // 出現次數升級等級
 window.butterSpeedLevel = 0;    // 出現速度升級等級
-
+window.butterGainLevel = 0;
 // ----------------------------------------------------
 // 2. Canvas 初始化
 // ----------------------------------------------------
@@ -73,7 +73,7 @@ export class Cookie {
             this.y = mouseY + this.offsetY - this.size / 2;
             const elapsed = (performance.now() - this.shrinkTimer) / 1000;
             this.scale = Math.max(1 - elapsed * 0.1, 0);
-            this.angle += 1; // 旋轉速度：每幀 5°
+            this.angle += 1; // 旋轉速度：每幀 1°
         }
     }
 
@@ -149,8 +149,9 @@ function gameLoop() {
         c.draw();
         if (c.follow && c.isGone()) {
             cookies.splice(i, 1);
-            window.count++;
-            document.getElementById('count').textContent = window.count;
+            const gain = 1 + (window.butterGainLevel || 0);
+            window.count += gain;
+            document.getElementById('count').textContent = formatNumber(window.count);
         }
     });
     requestAnimationFrame(gameLoop);
