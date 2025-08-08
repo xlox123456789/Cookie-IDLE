@@ -4,19 +4,50 @@
 import { formatNumber } from './utils.js';
 import { spawnCompanion } from './companion.js';
 console.log('ui.js loaded');
+// 畫面中「目前存在」的奶油餅乾數
+window.cookie_onscreen = 0;
+
+export function cookie_onscreen_updateHUD() {
+    const el = document.getElementById('cookie_onscreen_count');
+    if (el) el.textContent = String(window.cookie_onscreen);
+}
+
+// 生成一個奶油餅乾（Spawn）時呼叫
+export function cookie_onscreen_track_spawn() {
+    window.cookie_onscreen++;
+    cookie_onscreen_updateHUD();
+}
+
+// 奶油餅乾被吃掉/離場/銷毀（Despawn）時呼叫
+export function cookie_onscreen_track_despawn() {
+    if (window.cookie_onscreen > 0) {
+        window.cookie_onscreen--;
+        cookie_onscreen_updateHUD();
+    }
+}
+
+// （可選）掃描全部物件重新計算
+export function cookie_onscreen_rescan(list) {
+    try {
+        window.cookie_onscreen = list.filter(
+            o => o && o.active !== false && (o.type === 'butter_cookie' || o.kind === 'butter_cookie')
+        ).length;
+    } catch (e) { }
+    cookie_onscreen_updateHUD();
+}
 
 window.addEventListener('DOMContentLoaded', () => {
     // 1. 測試模式：初始 200 塊奶油餅乾
-    window.butter_cookie_count = 100000000000000;
+    window.butter_cookie_count = 0;
     //window.butter_cookie_count = 200;
     document.getElementById('count').textContent = formatNumber(window.butter_cookie_count);
 
     // 2. 升級等級 & 最大值常數
     const butter_cookie_MAX_COUNT_LEVEL = 30;
-    const MAX_SPEED_LEVEL = 50;
-    const MAX_GAIN_LEVEL = 400;
-    const MAX_EAT_LEVEL = 30;
-    const MAX_SUMMON_LEVEL = 3;
+    const butter_cookie_MAX_SPEED_LEVEL = 50;
+    const butter_cookie_MAX_GAIN_LEVEL = 400;
+    const butter_cookie_MAX_EAT_LEVEL = 30;
+    const butter_cookie_MAX_SUMMON_LEVEL = 3;
 
     // 讀取或初始化本地等級變數
     let butter_cookie_CountLevel = window.butter_cookie_CountLevel || 0;
@@ -74,7 +105,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // 按鈕狀態：出現速度
         const btnSpeed = document.getElementById('btn-speed');
-        if (butter_cookie_butterSpeedLevel >= MAX_SPEED_LEVEL) {
+        if (butter_cookie_butterSpeedLevel >= butter_cookie_MAX_SPEED_LEVEL) {
             btnSpeed.disabled = true;
             btnSpeed.textContent = 'MAX';
             btnSpeed.style.opacity = '0.5';
@@ -88,7 +119,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // 按鈕狀態：獲得數量
         const btnGain = document.getElementById('btn-gain');
-        if (butter_cookie_butterGainLevel >= MAX_GAIN_LEVEL) {
+        if (butter_cookie_butterGainLevel >= butter_cookie_MAX_GAIN_LEVEL) {
             btnGain.disabled = true;
             btnGain.textContent = 'MAX';
             btnGain.style.opacity = '0.5';
@@ -102,7 +133,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // 按鈕狀態：吃餅乾速度
         const btnEat = document.getElementById('btn-eat');
-        if (eatSpeedLevel >= MAX_EAT_LEVEL) {
+        if (eatSpeedLevel >= butter_cookie_MAX_EAT_LEVEL) {
             btnEat.disabled = true;
             btnEat.textContent = 'MAX';
             btnEat.style.opacity = '0.5';
@@ -116,7 +147,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // 按鈕狀態：召喚小夥伴
         const btnSummon = document.getElementById('btn-summon');
-        if (summonLevel >= MAX_SUMMON_LEVEL) {
+        if (summonLevel >= butter_cookie_MAX_SUMMON_LEVEL) {
             btnSummon.disabled = true;
             btnSummon.textContent = 'MAX';
             btnSummon.style.opacity = '0.5';
@@ -144,7 +175,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // 5. 綁定「出現速度」升級
     document.getElementById('btn-speed').addEventListener('click', () => {
-        if (butter_cookie_butterSpeedLevel >= MAX_SPEED_LEVEL) return;
+        if (butter_cookie_butterSpeedLevel >= butter_cookie_MAX_SPEED_LEVEL) return;
         const cost = Math.floor(10 * Math.pow(1.5, butter_cookie_butterSpeedLevel));
         if (window.butter_cookie_count < cost) return;
         window.butter_cookie_count -= cost;
@@ -157,7 +188,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // 6. 綁定「獲得數量」升級
     document.getElementById('btn-gain').addEventListener('click', () => {
-        if (butter_cookie_butterGainLevel >= MAX_GAIN_LEVEL) return;
+        if (butter_cookie_butterGainLevel >= butter_cookie_MAX_GAIN_LEVEL) return;
         const cost = Math.floor(500 * Math.pow(5, butter_cookie_butterGainLevel));
         if (window.butter_cookie_count < cost) return;
         window.butter_cookie_count -= cost;
@@ -170,7 +201,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // 7. 綁定「吃餅乾速度」升級
     document.getElementById('btn-eat').addEventListener('click', () => {
-        if (eatSpeedLevel >= MAX_EAT_LEVEL) return;
+        if (eatSpeedLevel >= butter_cookie_MAX_EAT_LEVEL) return;
         const cost = Math.floor(100 * Math.pow(1.5, eatSpeedLevel));
         if (window.butter_cookie_count < cost) return;
         window.butter_cookie_count -= cost;
@@ -180,7 +211,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // 8. 綁定「召喚小夥伴」升級
     document.getElementById('btn-summon').addEventListener('click', () => {
-        if (summonLevel >= MAX_SUMMON_LEVEL) return;
+        if (summonLevel >= butter_cookie_MAX_SUMMON_LEVEL) return;
         const cost = Math.floor(200 * Math.pow(8, summonLevel));
         if (window.butter_cookie_count < cost) return;
         window.butter_cookie_count -= cost;
@@ -221,4 +252,10 @@ window.addEventListener('DOMContentLoaded', () => {
             popup.style.display = 'none';
         }
     });
+    // 初始化
+    window.addEventListener('DOMContentLoaded', () => {
+        window.cookie_onscreen = window.cookie_onscreen || 0;
+        cookie_onscreen_updateHUD();
+    });
+
 }); // 這裡一定要有這個閉合

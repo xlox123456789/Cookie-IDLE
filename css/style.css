@@ -146,3 +146,20 @@ body {
     font-size: 16px;
     color: #333;
 }
+
+#cookie-onscreen {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 12px;
+    border: 2px solid #d2a679;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.9);
+    font-size: 18px;
+    color: #5c3b1e;
+    z-index: 9999;
+}

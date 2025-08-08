@@ -2,7 +2,7 @@
 import { formatNumber } from './utils.js';
 import { Eater } from './eater.js';
 import { companions, spawnCompanion } from './companion.js';
-
+import { cookie_onscreen_track_spawn, cookie_onscreen_track_despawn } from './ui.js';
 // 全域
 window.butter_cookie_count = 0;
 window.butter_cookie_CountLevel = 0;
@@ -59,6 +59,7 @@ export function butter_cookie_spawnCookie() {
         Math.random() * (width - 60),
         Math.random() * (height - 60)
     ));
+    cookie_onscreen_track_spawn()
 }
 export function butter_cookie_spawnMultipleCookies() {
     const n = (window.butter_cookie_CountLevel || 0) + 1;
@@ -119,6 +120,7 @@ function gameLoop() {
             c.eater.updateAbsorb(c, window.eatSpeedLevel);
             if (c.isGone()) {
                 butter_cookie_cookies.splice(i, 1);
+                cookie_onscreen_track_despawn();
                 const gain = 1 + (window.butter_cookie_butterGainLevel || 0);
                 window.butter_cookie_count += gain;
                 document.getElementById('count').textContent = formatNumber(window.butter_cookie_count);
