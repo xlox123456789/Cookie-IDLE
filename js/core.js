@@ -4,10 +4,10 @@ import { Eater } from './eater.js';
 import { companions, spawnCompanion } from './companion.js';
 
 // 全域
-window.count = 0;
-window.butterCountLevel = 0;
-window.butterSpeedLevel = 0;
-window.butterGainLevel = 0;
+window.butter_cookie_count = 0;
+window.butter_cookie_CountLevel = 0;
+window.butter_cookie_butterSpeedLevel = 0;
+window.butter_cookie_butterGainLevel = 0;
 window.eatSpeedLevel = 0;
 window.summonLevel = 0;
 
@@ -22,10 +22,10 @@ addEventListener('resize', () => {
 });
 
 // Cookie 圖
-export const cookieImg = new Image();
-cookieImg.src = 'cookie/cookie_butter.png';
+export const butter_cookie_cookieImg = new Image();
+butter_cookie_cookieImg.src = 'cookie/cookie_butter.png';
 
-export class Cookie {
+export class butter_cookie_Cookie {
     constructor(x, y) {
         this.x = x; this.y = y;
         this.size = 60; this.scale = 1; this.angle = 0;
@@ -47,32 +47,32 @@ export class Cookie {
         ctx.translate(cx, cy);
         ctx.rotate(this.angle * Math.PI / 180);
         ctx.scale(this.scale, this.scale);
-        ctx.drawImage(cookieImg, -this.size / 2, -this.size / 2, this.size, this.size);
+        ctx.drawImage(butter_cookie_cookieImg, -this.size / 2, -this.size / 2, this.size, this.size);
         ctx.restore();
     }
     isGone() { return this.scale <= 0; }
 }
 
-export let cookies = [];
-export function spawnCookie() {
-    cookies.push(new Cookie(
+export let butter_cookie_cookies = [];
+export function butter_cookie_spawnCookie() {
+    butter_cookie_cookies.push(new butter_cookie_Cookie(
         Math.random() * (width - 60),
         Math.random() * (height - 60)
     ));
 }
-export function spawnMultipleCookies() {
-    const n = (window.butterCountLevel || 0) + 1;
-    for (let i = 0; i < n; i++)spawnCookie();
+export function butter_cookie_spawnMultipleCookies() {
+    const n = (window.butter_cookie_CountLevel || 0) + 1;
+    for (let i = 0; i < n; i++)butter_cookie_spawnCookie();
 }
 
 const BASE_INTERVAL = 10000;
 let spawnTimeoutId = null;
 export function scheduleNextSpawn() {
     if (spawnTimeoutId !== null) clearTimeout(spawnTimeoutId);
-    const lvl = window.butterSpeedLevel || 0;
+    const lvl = window.butter_cookie_butterSpeedLevel || 0;
     const interval = BASE_INTERVAL / (1 + lvl * 0.01);
     spawnTimeoutId = setTimeout(() => {
-        spawnMultipleCookies(); scheduleNextSpawn();
+        butter_cookie_spawnMultipleCookies(); scheduleNextSpawn();
     }, interval);
 }
 
@@ -105,7 +105,7 @@ function gameLoop() {
 
     ctx.clearRect(0, 0, width, height);
 
-    cookies.forEach((c, i) => {
+    butter_cookie_cookies.forEach((c, i) => {
         c.update();
         if (!c.absorbed && !c.eater) {
             if (mainEater.tryAbsorb(c, mouseX, mouseY, window.eatSpeedLevel)) c.absorbed = true;
@@ -118,10 +118,10 @@ function gameLoop() {
         if (c.absorbed && c.eater) {
             c.eater.updateAbsorb(c, window.eatSpeedLevel);
             if (c.isGone()) {
-                cookies.splice(i, 1);
-                const gain = 1 + (window.butterGainLevel || 0);
-                window.count += gain;
-                document.getElementById('count').textContent = formatNumber(window.count);
+                butter_cookie_cookies.splice(i, 1);
+                const gain = 1 + (window.butter_cookie_butterGainLevel || 0);
+                window.butter_cookie_count += gain;
+                document.getElementById('count').textContent = formatNumber(window.butter_cookie_count);
             }
         }
         c.draw();
@@ -145,12 +145,12 @@ function gameLoop() {
 
 // 啟動
 export function startGame() {
-    spawnMultipleCookies();
+    butter_cookie_spawnMultipleCookies();
     scheduleNextSpawn();
     lastTime = performance.now();
     gameLoop();
 }
-cookieImg.onload = startGame;
+butter_cookie_cookieImg.onload = startGame;
 window.scheduleNextSpawn = scheduleNextSpawn;
 
 // 召喚

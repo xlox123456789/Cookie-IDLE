@@ -34,14 +34,14 @@ export class Eater {
     }
 
     // 嘗試把某顆 cookie 標記為「要吃」
-    tryAbsorb(cookie, mx, my, eatLvl = 0) {
-        if (cookie.eater) return false; // 已有人在吃
-        const cx = cookie.x + cookie.size / 2;
-        const cy = cookie.y + cookie.size / 2;
+    tryAbsorb(butter_cookie_cookie, mx, my, eatLvl = 0) {
+        if (butter_cookie_cookie.eater) return false; // 已有人在吃
+        const cx = butter_cookie_cookie.x + butter_cookie_cookie.size / 2;
+        const cy = butter_cookie_cookie.y + butter_cookie_cookie.size / 2;
         const dist = Math.hypot(mx - cx, my - cy);
         if (dist <= this.absorbRange) {
-            cookie.eater = this;
-            cookie.absorbState = 'approach';       // ★ 先進入「靠近」階段
+            butter_cookie_cookie.eater = this;
+            butter_cookie_cookie.absorbState = 'approach';       // ★ 先進入「靠近」階段
             // 先不要設定 shrinkTimer / offset，等靠近到 attachRadius 再設
             return true;
         }
@@ -50,20 +50,20 @@ export class Eater {
 
     // 每幀更新「被自己吃掉的餅乾」
     // 回傳 true 代表已吃完（可由外部移除並加分）
-    updateAbsorb(cookie, eatLvl = 0) {
-        if (cookie.eater !== this) return false;
+    updateAbsorb(butter_cookie_cookie, eatLvl = 0) {
+        if (butter_cookie_cookie.eater !== this) return false;
 
         // 以 eater（this）為目標
         const ex = this.x;
         const ey = this.y;
-        const cx = cookie.x + cookie.size / 2;
-        const cy = cookie.y + cookie.size / 2;
+        const cx = butter_cookie_cookie.x + butter_cookie_cookie.size / 2;
+        const cy = butter_cookie_cookie.y + butter_cookie_cookie.size / 2;
         let dx = ex - cx;
         let dy = ey - cy;
         const dist = Math.hypot(dx, dy);
 
         // 階段一：先靠近到 attachRadius（例如 80）
-        if (cookie.absorbState === 'approach') {
+        if (butter_cookie_cookie.absorbState === 'approach') {
             if (dist > this.attachRadius) {
                 // 往目標移動，但不要穿過半徑 80
                 const move = Math.min(this.approachSpeed, dist - this.attachRadius);
@@ -71,37 +71,37 @@ export class Eater {
                     const nx = dx / dist;
                     const ny = dy / dist;
                     // cookie.x / y 是左上角座標，因此直接加 move
-                    cookie.x += nx * move;
-                    cookie.y += ny * move;
+                    butter_cookie_cookie.x += nx * move;
+                    butter_cookie_cookie.y += ny * move;
                 }
                 return false; // 還在靠近，先不進入縮小
             } else {
                 // 進入跟隨縮小階段
-                cookie.absorbState = 'attach';
-                cookie.shrinkTimer = performance.now();
+                butter_cookie_cookie.absorbState = 'attach';
+                butter_cookie_cookie.shrinkTimer = performance.now();
                 // 記錄當下相對偏移（用左上角座標）
-                cookie.offsetX = cookie.x - this.x;
-                cookie.offsetY = cookie.y - this.y;
+                butter_cookie_cookie.offsetX = butter_cookie_cookie.x - this.x;
+                butter_cookie_cookie.offsetY = butter_cookie_cookie.y - this.y;
             }
         }
 
         // 階段二：跟隨 & 縮小 & 旋轉
-        if (cookie.absorbState === 'attach') {
+        if (butter_cookie_cookie.absorbState === 'attach') {
             // 跟隨 eater 的相對偏移
-            cookie.x = this.x + cookie.offsetX;
-            cookie.y = this.y + cookie.offsetY;
+            butter_cookie_cookie.x = this.x + butter_cookie_cookie.offsetX;
+            butter_cookie_cookie.y = this.y + butter_cookie_cookie.offsetY;
 
             // 縮小（受吃餅乾速度等級影響）
-            const elapsed = (performance.now() - cookie.shrinkTimer) / 1000;
+            const elapsed = (performance.now() - butter_cookie_cookie.shrinkTimer) / 1000;
             const rate = this.shrinkRate * (1 + eatLvl * 0.05);
-            cookie.scale = Math.max(1 - elapsed * rate, 0);
+            butter_cookie_cookie.scale = Math.max(1 - elapsed * rate, 0);
 
             // 旋轉
-            cookie.angle += 1 + eatLvl * 0.5;
+            butter_cookie_cookie.angle += 1 + eatLvl * 0.5;
 
-            if (cookie.scale <= 0) {
-                delete cookie.eater;
-                delete cookie.absorbState;
+            if (butter_cookie_cookie.scale <= 0) {
+                delete butter_cookie_cookie.eater;
+                delete butter_cookie_cookie.absorbState;
                 return true; // 已吃完
             }
         }
