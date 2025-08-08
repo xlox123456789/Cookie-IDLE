@@ -1,71 +1,115 @@
 // js/eater.js
 export class Eater {
     constructor(imgSrc, size = 40) {
+        // 圖片載入
         this.img = new Image();
         this.img.src = imgSrc;
         this.loaded = false;
         this.img.onload = () => { this.loaded = true; };
 
+        // 位置與外觀
         this.x = 0;
         this.y = 0;
         this.size = size;
 
-        // 平滑旋轉用
+        // 主角平滑旋轉（小夥伴可不呼叫 smoothRotate）
         this.angle = 0;        // 畫面上實際角度（度）
         this.targetAngle = 0;  // 目標角度
 
         // 吃餅乾參數
-        this.absorbRange = 30;
-        this.shrinkRate = 0.1;
+        this.absorbRange = 30;  // 進入「要吃」的觸發距離（你原本的設定）
+        this.shrinkRate = 0.1; // 縮小速率基底
+        this.approachSpeed = 10;  // ★ 新增：開吃後，先以此速度靠近到 80
+        this.attachRadius = 30;  // ★ 新增：先靠近到這個距離再開始縮小
     }
 
-    setPosition(x, y) {
-        this.x = x;
-        this.y = y;
-    }
-
-    // 設定新的目標朝向（滑鼠移動向量）
+    // 位置＆方向
+    setPosition(x, y) { this.x = x; this.y = y; }
     setDirection(dx, dy) {
-        this.targetAngle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+        this.targetAngle = Math.atan2(dy, dx) * 180 / Math.PI + 90; // 原圖朝上 +90°
     }
-
-    // 每幀把 angle 漸進到 targetAngle
     smoothRotate(factor = 0.2) {
         let diff = (this.targetAngle - this.angle + 540) % 360 - 180;
         this.angle += diff * factor;
     }
 
+    // 嘗試把某顆 cookie 標記為「要吃」
     tryAbsorb(cookie, mx, my, eatLvl = 0) {
-        if (cookie.eater) return false;
+        if (cookie.eater) return false; // 已有人在吃
         const cx = cookie.x + cookie.size / 2;
         const cy = cookie.y + cookie.size / 2;
-        if (Math.hypot(mx - cx, my - cy) <= this.absorbRange) {
+        const dist = Math.hypot(mx - cx, my - cy);
+        if (dist <= this.absorbRange) {
             cookie.eater = this;
-            cookie.shrinkTimer = performance.now();
-            cookie.offsetX = cookie.x - this.x;
-            cookie.offsetY = cookie.y - this.y;
+            cookie.absorbState = 'approach';       // ★ 先進入「靠近」階段
+            // 先不要設定 shrinkTimer / offset，等靠近到 attachRadius 再設
             return true;
         }
         return false;
     }
 
+    // 每幀更新「被自己吃掉的餅乾」
+    // 回傳 true 代表已吃完（可由外部移除並加分）
     updateAbsorb(cookie, eatLvl = 0) {
         if (cookie.eater !== this) return false;
-        // 跟隨自己
-        cookie.x = this.x + cookie.offsetX;
-        cookie.y = this.y + cookie.offsetY;
-        // 縮小 & 旋轉
-        const elapsed = (performance.now() - cookie.shrinkTimer) / 1000;
-        const rate = this.shrinkRate * (1 + eatLvl * 0.05);
-        cookie.scale = Math.max(1 - elapsed * rate, 0);
-        cookie.angle += 1 + eatLvl * 0.5;
-        if (cookie.scale <= 0) {
-            delete cookie.eater;
-            return true;
+
+        // 以 eater（this）為目標
+        const ex = this.x;
+        const ey = this.y;
+        const cx = cookie.x + cookie.size / 2;
+        const cy = cookie.y + cookie.size / 2;
+        let dx = ex - cx;
+        let dy = ey - cy;
+        const dist = Math.hypot(dx, dy);
+
+        // 階段一：先靠近到 attachRadius（例如 80）
+        if (cookie.absorbState === 'approach') {
+            if (dist > this.attachRadius) {
+                // 往目標移動，但不要穿過半徑 80
+                const move = Math.min(this.approachSpeed, dist - this.attachRadius);
+                if (dist > 0) {
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    // cookie.x / y 是左上角座標，因此直接加 move
+                    cookie.x += nx * move;
+                    cookie.y += ny * move;
+                }
+                return false; // 還在靠近，先不進入縮小
+            } else {
+                // 進入跟隨縮小階段
+                cookie.absorbState = 'attach';
+                cookie.shrinkTimer = performance.now();
+                // 記錄當下相對偏移（用左上角座標）
+                cookie.offsetX = cookie.x - this.x;
+                cookie.offsetY = cookie.y - this.y;
+            }
         }
+
+        // 階段二：跟隨 & 縮小 & 旋轉
+        if (cookie.absorbState === 'attach') {
+            // 跟隨 eater 的相對偏移
+            cookie.x = this.x + cookie.offsetX;
+            cookie.y = this.y + cookie.offsetY;
+
+            // 縮小（受吃餅乾速度等級影響）
+            const elapsed = (performance.now() - cookie.shrinkTimer) / 1000;
+            const rate = this.shrinkRate * (1 + eatLvl * 0.05);
+            cookie.scale = Math.max(1 - elapsed * rate, 0);
+
+            // 旋轉
+            cookie.angle += 1 + eatLvl * 0.5;
+
+            if (cookie.scale <= 0) {
+                delete cookie.eater;
+                delete cookie.absorbState;
+                return true; // 已吃完
+            }
+        }
+
         return false;
     }
 
+    // 繪製自己
     draw(ctx) {
         if (!this.loaded) return;
         ctx.save();

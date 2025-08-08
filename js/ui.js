@@ -8,6 +8,7 @@ console.log('ui.js loaded');
 window.addEventListener('DOMContentLoaded', () => {
     // 1. 測試模式：初始 200 塊奶油餅乾
     window.count = 0;
+    //window.count = 200;
     document.getElementById('count').textContent = formatNumber(window.count);
 
     // 2. 升級等級 & 最大值常數
@@ -212,6 +213,12 @@ window.addEventListener('DOMContentLoaded', () => {
             ) {
                 popup.style.display = 'none';
             }
+        }
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && popup.style.display === 'block') {
+            e.preventDefault();
+            popup.style.display = 'none';
         }
     });
 }); // 這裡一定要有這個閉合
