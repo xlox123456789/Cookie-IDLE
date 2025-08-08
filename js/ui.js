@@ -48,6 +48,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const butter_cookie_MAX_GAIN_LEVEL = 400;
     const butter_cookie_MAX_EAT_LEVEL = 30;
     const butter_cookie_MAX_SUMMON_LEVEL = 3;
+    const butter_cookie_MAX_CHOCO_UNLOCK_LEVEL = 1;
 
     // 讀取或初始化本地等級變數
     let butter_cookie_CountLevel = window.butter_cookie_CountLevel || 0;
@@ -55,6 +56,7 @@ window.addEventListener('DOMContentLoaded', () => {
     let butter_cookie_butterGainLevel = window.butter_cookie_butterGainLevel || 0;
     let eatSpeedLevel = window.eatSpeedLevel || 0;
     let summonLevel = window.summonLevel || 0;
+    let cookie_chocolate_unlockLevel = window.cookie_chocolate_unlockLevel || 0;
 
     // 3. 更新商店 UI：LV/最大、花費、按鈕狀態、左上角計數
     function updateShopUI() {
@@ -64,6 +66,7 @@ window.addEventListener('DOMContentLoaded', () => {
         window.butter_cookie_butterGainLevel = butter_cookie_butterGainLevel;
         window.eatSpeedLevel = eatSpeedLevel;
         window.summonLevel = summonLevel;
+        window.cookie_chocolate_unlockLevel = cookie_chocolate_unlockLevel;
 
         // 左上角計數
         document.getElementById('count').textContent = formatNumber(window.butter_cookie_count);
@@ -74,6 +77,7 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('lv-gain').textContent = butter_cookie_butterGainLevel;
         document.getElementById('lv-eat').textContent = eatSpeedLevel;
         document.getElementById('lv-summon').textContent = summonLevel;
+        document.getElementById('lv-choco').textContent = cookie_chocolate_unlockLevel;
 
         // 計算花費
         const costCount = Math.floor(10 * Math.pow(1.5, butter_cookie_CountLevel));
@@ -81,6 +85,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const costGain = Math.floor(500 * Math.pow(5, butter_cookie_butterGainLevel));
         const costEat = Math.floor(100 * Math.pow(1.5, eatSpeedLevel));
         const costSummon = Math.floor(200 * Math.pow(8, summonLevel));
+        const costChoco = 1e4;
 
         // 顯示花費
         document.getElementById('cost-count').textContent = formatNumber(costCount);
@@ -88,6 +93,7 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('cost-gain').textContent = formatNumber(costGain);
         document.getElementById('cost-eat').textContent = formatNumber(costEat);
         document.getElementById('cost-summon').textContent = formatNumber(costSummon);
+        document.getElementById('cost-choco').textContent = formatNumber(costChoco);
 
         // 按鈕狀態：出現次數
         const btnCount = document.getElementById('btn-count');
@@ -158,6 +164,19 @@ window.addEventListener('DOMContentLoaded', () => {
             btnSummon.style.opacity = '1';
             btnSummon.style.cursor = 'pointer';
         }
+        // 按鈕狀態：解鎖巧克力餅乾
+        const btnChoco = document.getElementById('btn-choco');
+        if (cookie_chocolate_unlockLevel >= butter_cookie_MAX_CHOCO_UNLOCK_LEVEL) {
+            btnChoco.disabled = true;
+            btnChoco.textContent = 'MAX';
+            btnChoco.style.opacity = '0.5';
+            btnChoco.style.cursor = 'default';
+        } else {
+            btnChoco.disabled = false;
+            btnChoco.textContent = '+1';
+            btnChoco.style.opacity = '1';
+            btnChoco.style.cursor = 'pointer';
+        }
     }
 
     // 初次更新
@@ -219,6 +238,16 @@ window.addEventListener('DOMContentLoaded', () => {
         updateShopUI();
         spawnCompanion(window.innerWidth, window.innerHeight);
     });
+    // 綁定「解鎖巧克力餅乾」
+    document.getElementById('btn-choco').addEventListener('click', () => {
+        if (cookie_chocolate_unlockLevel >= butter_cookie_MAX_CHOCO_UNLOCK_LEVEL) return;
+        const cost = 1e4; // 10,000
+        if (window.butter_cookie_count < cost) return;
+        window.butter_cookie_count -= cost;
+        cookie_chocolate_unlockLevel++;
+        updateShopUI();
+        // 目前先不做解鎖後效果，之後在這裡掛鉤真正的解鎖行為
+    });
 
     // 9. 商店開關邏輯
     const popup = document.getElementById('popup');
@@ -228,10 +257,12 @@ window.addEventListener('DOMContentLoaded', () => {
     openBtn.addEventListener('click', e => {
         e.stopPropagation();
         popup.style.display = 'block';
+        document.body.style.overflow = 'hidden';
     });
     closeBtn.addEventListener('click', e => {
         e.stopPropagation();
         popup.style.display = 'none';
+        document.body.style.overflow = '';
     });
     document.addEventListener('click', e => {
         if (popup.style.display === 'block') {
@@ -243,6 +274,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 e.clientY > r.bottom
             ) {
                 popup.style.display = 'none';
+                document.body.style.overflow = '';
             }
         }
     });
@@ -250,6 +282,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Escape' && popup.style.display === 'block') {
             e.preventDefault();
             popup.style.display = 'none';
+            document.body.style.overflow = '';
         }
     });
     // 初始化

@@ -11,6 +11,8 @@ window.butter_cookie_butterGainLevel = 0;
 window.eatSpeedLevel = 0;
 window.summonLevel = 0;
 
+window.cookie_chocolate_unlockLevel = 0;
+
 // Canvas
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
