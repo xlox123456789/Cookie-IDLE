@@ -1,4 +1,6 @@
 // js/core.js
+
+import { startAutoSave, loadGame, saveGame } from './save.js';
 import { formatNumber } from './utils.js';
 import { Eater } from './eater.js';
 import { companions, spawnCompanion } from './companion.js';
