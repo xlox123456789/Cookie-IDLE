@@ -41,6 +41,22 @@ function applyState(s) {
     window.upgrades = s.upgrades || {};
 }
 
+// 不改結構，只做安全補值與型別轉換
+function sanitizeState(s) {
+    return {
+        v: 1,
+        ts: Number(s?.ts) || Date.now(),
+        butter_cookie_count: Number(s?.butter_cookie_count) || 0,
+        butter_cookie_CountLevel: Number(s?.butter_cookie_CountLevel) || 0,
+        butter_cookie_butterSpeedLevel: Number(s?.butter_cookie_butterSpeedLevel) || 0,
+        butter_cookie_butterGainLevel: Number(s?.butter_cookie_butterGainLevel) || 0,
+        eatSpeedLevel: Number(s?.eatSpeedLevel) || 0,
+        summonLevel: Number(s?.summonLevel) || 0,
+        companions: Array.isArray(s?.companions) ? s.companions : [],
+        upgrades: s?.upgrades ?? {}
+    };
+}
+
 // 3) 存檔 / 讀檔 / 啟動自動存
 export function saveGame() {
     try {
@@ -56,7 +72,8 @@ export function loadGame() {
     try {
         const raw = localStorage.getItem(SAVE_KEY);
         if (!raw) return false;
-        applyState(JSON.parse(raw));
+        const safe = sanitizeState(JSON.parse(raw));
+        applyState(safe);
         console.debug('[Load] OK');
         return true;
     } catch (err) {
