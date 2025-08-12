@@ -38,7 +38,7 @@ export function cookie_onscreen_rescan(list) {
 
 window.addEventListener('DOMContentLoaded', () => {
     // 1. 測試模式：初始 200 塊奶油餅乾
-    window.butter_cookie_count = 1000000000;
+    window.butter_cookie_count = 0;
     //window.butter_cookie_count = 200;
     document.getElementById('count').textContent = formatNumber(window.butter_cookie_count);
 
