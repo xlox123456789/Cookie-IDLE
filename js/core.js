@@ -12,7 +12,8 @@ window.butter_cookie_butterSpeedLevel = 0;
 window.butter_cookie_butterGainLevel = 0;
 window.eatSpeedLevel = 0;
 window.summonLevel = 0;
-
+window.companions = companions;
+window.spawnCompanion = spawnCompanion;
 window.cookie_chocolate_unlockLevel = 0;
 
 // Canvas
@@ -83,9 +84,11 @@ export function scheduleNextSpawn() {
 
 // 主角
 const mainEater = new Eater('skin/man1.png', 40);
+window.hero = mainEater; // ← 讓 save.js 能把同伴目標設為主角
 
-let mouseX = 0, mouseY = 0;
-let prevX = 0, prevY = 0;
+let mouseX = width / 2, mouseY = height / 2;
+let prevX = mouseX, prevY = mouseY;
+mainEater.setPosition(mouseX, mouseY);   // ★ 主角一開始就不在 (0,0)
 canvas.addEventListener('mousemove', e => {
     // 立刻設定主角 targetAngle
     const dx = e.clientX - prevX;
