@@ -1,4 +1,4 @@
-// js/core.js — 主遊戲迴圈（v1.9）
+// js/core.js — 主遊戲迴圈（v1.19）
 // 變更重點：
 //  1. 全域變數統一改用 Game（見 state.js），不再散落一堆 window.xxx。
 //  2. HUD 更新邏輯抽到 hud.js，避免與 ui.js 互相 import 造成循環依賴。
