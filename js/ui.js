@@ -1,255 +1,79 @@
-// js/utils.js 已經 export function formatNumber
+// js/ui.js — 商店 UI 與互動邏輯（v1.9）
+// 變更重點：
+//  1. 不再有「一進畫面就把 cookieCount 強制歸零」的舊測試碼
+//     （這行是先前存檔讀了也沒用的原因之一）。
+//  2. 六個升級按鈕的邏輯合併成同一個 tryUpgrade()，
+//     花費/上限統一從 config.js 的 UPGRADE_CONFIG 讀取，不再各自寫死數字。
 
-// js/ui.js
 import { formatNumber } from './utils.js';
+import { Game } from './state.js';
+import { UPGRADE_CONFIG, getUpgradeCost } from './config.js';
+import { updateCookieCountHUD, updateCookieOnFieldHUD } from './hud.js';
 import { spawnCompanion } from './companion.js';
+import { scheduleNextSpawn } from './core.js';
+
 console.log('ui.js loaded');
-// 畫面中「目前存在」的奶油餅乾數
-window.cookie_onscreen = 0;
 
-export function cookie_onscreen_updateHUD() {
-    const el = document.getElementById('cookie_onscreen_count');
-    if (el) el.textContent = String(window.cookie_onscreen);
-}
+// 各升級項目對應的 DOM id
+const UPGRADE_DOM = {
+    count: { lv: 'lv-count', cost: 'cost-count', btn: 'btn-count' },
+    speed: { lv: 'lv-speed', cost: 'cost-speed', btn: 'btn-speed' },
+    gain: { lv: 'lv-gain', cost: 'cost-gain', btn: 'btn-gain' },
+    eat: { lv: 'lv-eat', cost: 'cost-eat', btn: 'btn-eat' },
+    summon: { lv: 'lv-summon', cost: 'cost-summon', btn: 'btn-summon' },
+    choco: { lv: 'lv-choco', cost: 'cost-choco', btn: 'btn-choco' },
+};
 
-// 生成一個奶油餅乾（Spawn）時呼叫
-export function cookie_onscreen_track_spawn() {
-    window.cookie_onscreen++;
-    cookie_onscreen_updateHUD();
-}
+function updateShopUI() {
+    updateCookieCountHUD();
 
-// 奶油餅乾被吃掉/離場/銷毀（Despawn）時呼叫
-export function cookie_onscreen_track_despawn() {
-    if (window.cookie_onscreen > 0) {
-        window.cookie_onscreen--;
-        cookie_onscreen_updateHUD();
+    for (const key in UPGRADE_DOM) {
+        const { lv, cost, btn } = UPGRADE_DOM[key];
+        const level = Game.levels[key];
+        const max = UPGRADE_CONFIG[key].max;
+
+        document.getElementById(lv).textContent = level;
+        document.getElementById(cost).textContent = formatNumber(getUpgradeCost(key));
+
+        const btnEl = document.getElementById(btn);
+        const maxed = level >= max;
+        btnEl.disabled = maxed;
+        btnEl.textContent = maxed ? 'MAX' : '+1';
+        btnEl.style.opacity = maxed ? '0.5' : '1';
+        btnEl.style.cursor = maxed ? 'default' : 'pointer';
     }
 }
 
-// （可選）掃描全部物件重新計算
-export function cookie_onscreen_rescan(list) {
-    try {
-        window.cookie_onscreen = list.filter(
-            o => o && o.active !== false && (o.type === 'butter_cookie' || o.kind === 'butter_cookie')
-        ).length;
-    } catch (e) { }
-    cookie_onscreen_updateHUD();
+// 嘗試升級某一項目；成功時可傳入 onSuccess 做額外處理（例如重新排程生成）
+function tryUpgrade(key, onSuccess) {
+    const max = UPGRADE_CONFIG[key].max;
+    if (Game.levels[key] >= max) return;
+
+    const cost = getUpgradeCost(key);
+    if (Game.cookieCount < cost) return;
+
+    Game.cookieCount -= cost;
+    Game.levels[key]++;
+    updateShopUI();
+    if (onSuccess) onSuccess();
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    // 1. 測試模式：初始 200 塊奶油餅乾
-    window.butter_cookie_count = 0;
-    //window.butter_cookie_count = 200;
-    document.getElementById('count').textContent = formatNumber(window.butter_cookie_count);
-
-    // 2. 升級等級 & 最大值常數
-    const butter_cookie_MAX_COUNT_LEVEL = 30;
-    const butter_cookie_MAX_SPEED_LEVEL = 50;
-    const butter_cookie_MAX_GAIN_LEVEL = 400;
-    const butter_cookie_MAX_EAT_LEVEL = 30;
-    const butter_cookie_MAX_SUMMON_LEVEL = 3;
-    const butter_cookie_MAX_CHOCO_UNLOCK_LEVEL = 1;
-
-    // 讀取或初始化本地等級變數
-    let butter_cookie_CountLevel = window.butter_cookie_CountLevel || 0;
-    let butter_cookie_butterSpeedLevel = window.butter_cookie_butterSpeedLevel || 0;
-    let butter_cookie_butterGainLevel = window.butter_cookie_butterGainLevel || 0;
-    let eatSpeedLevel = window.eatSpeedLevel || 0;
-    let summonLevel = window.summonLevel || 0;
-    let cookie_chocolate_unlockLevel = window.cookie_chocolate_unlockLevel || 0;
-
-    // 3. 更新商店 UI：LV/最大、花費、按鈕狀態、左上角計數
-    function updateShopUI() {
-        // 同步全域等級
-        window.butter_cookie_CountLevel = butter_cookie_CountLevel;
-        window.butter_cookie_butterSpeedLevel = butter_cookie_butterSpeedLevel;
-        window.butter_cookie_butterGainLevel = butter_cookie_butterGainLevel;
-        window.eatSpeedLevel = eatSpeedLevel;
-        window.summonLevel = summonLevel;
-        window.cookie_chocolate_unlockLevel = cookie_chocolate_unlockLevel;
-
-        // 左上角計數
-        document.getElementById('count').textContent = formatNumber(window.butter_cookie_count);
-
-        // LV / MAX 顯示
-        document.getElementById('lv-count').textContent = butter_cookie_CountLevel;
-        document.getElementById('lv-speed').textContent = butter_cookie_butterSpeedLevel;
-        document.getElementById('lv-gain').textContent = butter_cookie_butterGainLevel;
-        document.getElementById('lv-eat').textContent = eatSpeedLevel;
-        document.getElementById('lv-summon').textContent = summonLevel;
-        document.getElementById('lv-choco').textContent = cookie_chocolate_unlockLevel;
-
-        // 計算花費
-        const costCount = Math.floor(10 * Math.pow(1.5, butter_cookie_CountLevel));
-        const costSpeed = Math.floor(10 * Math.pow(1.5, butter_cookie_butterSpeedLevel));
-        const costGain = Math.floor(500 * Math.pow(5, butter_cookie_butterGainLevel));
-        const costEat = Math.floor(100 * Math.pow(1.5, eatSpeedLevel));
-        const costSummon = Math.floor(200 * Math.pow(8, summonLevel));
-        const costChoco = 1e4;
-
-        // 顯示花費
-        document.getElementById('cost-count').textContent = formatNumber(costCount);
-        document.getElementById('cost-speed').textContent = formatNumber(costSpeed);
-        document.getElementById('cost-gain').textContent = formatNumber(costGain);
-        document.getElementById('cost-eat').textContent = formatNumber(costEat);
-        document.getElementById('cost-summon').textContent = formatNumber(costSummon);
-        document.getElementById('cost-choco').textContent = formatNumber(costChoco);
-
-        // 按鈕狀態：出現次數
-        const btnCount = document.getElementById('btn-count');
-        if (butter_cookie_CountLevel >= butter_cookie_MAX_COUNT_LEVEL) {
-            btnCount.disabled = true;
-            btnCount.textContent = 'MAX';
-            btnCount.style.opacity = '0.5';
-            btnCount.style.cursor = 'default';
-        } else {
-            btnCount.disabled = false;
-            btnCount.textContent = '+1';
-            btnCount.style.opacity = '1';
-            btnCount.style.cursor = 'pointer';
-        }
-
-        // 按鈕狀態：出現速度
-        const btnSpeed = document.getElementById('btn-speed');
-        if (butter_cookie_butterSpeedLevel >= butter_cookie_MAX_SPEED_LEVEL) {
-            btnSpeed.disabled = true;
-            btnSpeed.textContent = 'MAX';
-            btnSpeed.style.opacity = '0.5';
-            btnSpeed.style.cursor = 'default';
-        } else {
-            btnSpeed.disabled = false;
-            btnSpeed.textContent = '+1';
-            btnSpeed.style.opacity = '1';
-            btnSpeed.style.cursor = 'pointer';
-        }
-
-        // 按鈕狀態：獲得數量
-        const btnGain = document.getElementById('btn-gain');
-        if (butter_cookie_butterGainLevel >= butter_cookie_MAX_GAIN_LEVEL) {
-            btnGain.disabled = true;
-            btnGain.textContent = 'MAX';
-            btnGain.style.opacity = '0.5';
-            btnGain.style.cursor = 'default';
-        } else {
-            btnGain.disabled = false;
-            btnGain.textContent = '+1';
-            btnGain.style.opacity = '1';
-            btnGain.style.cursor = 'pointer';
-        }
-
-        // 按鈕狀態：吃餅乾速度
-        const btnEat = document.getElementById('btn-eat');
-        if (eatSpeedLevel >= butter_cookie_MAX_EAT_LEVEL) {
-            btnEat.disabled = true;
-            btnEat.textContent = 'MAX';
-            btnEat.style.opacity = '0.5';
-            btnEat.style.cursor = 'default';
-        } else {
-            btnEat.disabled = false;
-            btnEat.textContent = '+1';
-            btnEat.style.opacity = '1';
-            btnEat.style.cursor = 'pointer';
-        }
-
-        // 按鈕狀態：召喚小夥伴
-        const btnSummon = document.getElementById('btn-summon');
-        if (summonLevel >= butter_cookie_MAX_SUMMON_LEVEL) {
-            btnSummon.disabled = true;
-            btnSummon.textContent = 'MAX';
-            btnSummon.style.opacity = '0.5';
-            btnSummon.style.cursor = 'default';
-        } else {
-            btnSummon.disabled = false;
-            btnSummon.textContent = '+1';
-            btnSummon.style.opacity = '1';
-            btnSummon.style.cursor = 'pointer';
-        }
-        // 按鈕狀態：解鎖巧克力餅乾
-        const btnChoco = document.getElementById('btn-choco');
-        if (cookie_chocolate_unlockLevel >= butter_cookie_MAX_CHOCO_UNLOCK_LEVEL) {
-            btnChoco.disabled = true;
-            btnChoco.textContent = 'MAX';
-            btnChoco.style.opacity = '0.5';
-            btnChoco.style.cursor = 'default';
-        } else {
-            btnChoco.disabled = false;
-            btnChoco.textContent = '+1';
-            btnChoco.style.opacity = '1';
-            btnChoco.style.cursor = 'pointer';
-        }
-    }
-
-    // 初次更新
+    // 初次繪製商店 UI（此時 Game 狀態已由 save.js 讀檔完成）
     updateShopUI();
+    updateCookieOnFieldHUD();
 
-    // 4. 綁定「出現次數」升級
-    document.getElementById('btn-count').addEventListener('click', () => {
-        if (butter_cookie_CountLevel >= butter_cookie_MAX_COUNT_LEVEL) return;
-        const cost = Math.floor(10 * Math.pow(1.5, butter_cookie_CountLevel));
-        if (window.butter_cookie_count < cost) return;
-        window.butter_cookie_count -= cost;
-        butter_cookie_CountLevel++;
-        updateShopUI();
-    });
+    document.getElementById('btn-count').addEventListener('click', () => tryUpgrade('count'));
+    document.getElementById('btn-speed').addEventListener('click', () => tryUpgrade('speed', scheduleNextSpawn));
+    document.getElementById('btn-gain').addEventListener('click', () => tryUpgrade('gain'));
+    document.getElementById('btn-eat').addEventListener('click', () => tryUpgrade('eat'));
+    document.getElementById('btn-summon').addEventListener('click', () =>
+        tryUpgrade('summon', () => spawnCompanion(innerWidth, innerHeight))
+    );
+    document.getElementById('btn-choco').addEventListener('click', () => tryUpgrade('choco'));
+    // 巧克力餅乾解鎖後的實際遊戲效果依需求暫不實作，僅保留購買/扣費行為。
 
-    // 5. 綁定「出現速度」升級
-    document.getElementById('btn-speed').addEventListener('click', () => {
-        if (butter_cookie_butterSpeedLevel >= butter_cookie_MAX_SPEED_LEVEL) return;
-        const cost = Math.floor(10 * Math.pow(1.5, butter_cookie_butterSpeedLevel));
-        if (window.butter_cookie_count < cost) return;
-        window.butter_cookie_count -= cost;
-        butter_cookie_butterSpeedLevel++;
-        updateShopUI();
-        if (typeof window.scheduleNextSpawn === 'function') {
-            window.scheduleNextSpawn();
-        }
-    });
-
-    // 6. 綁定「獲得數量」升級
-    document.getElementById('btn-gain').addEventListener('click', () => {
-        if (butter_cookie_butterGainLevel >= butter_cookie_MAX_GAIN_LEVEL) return;
-        const cost = Math.floor(500 * Math.pow(5, butter_cookie_butterGainLevel));
-        if (window.butter_cookie_count < cost) return;
-        window.butter_cookie_count -= cost;
-        butter_cookie_butterGainLevel++;
-        updateShopUI();
-        if (typeof window.scheduleNextSpawn === 'function') {
-            window.scheduleNextSpawn();
-        }
-    });
-
-    // 7. 綁定「吃餅乾速度」升級
-    document.getElementById('btn-eat').addEventListener('click', () => {
-        if (eatSpeedLevel >= butter_cookie_MAX_EAT_LEVEL) return;
-        const cost = Math.floor(100 * Math.pow(1.5, eatSpeedLevel));
-        if (window.butter_cookie_count < cost) return;
-        window.butter_cookie_count -= cost;
-        eatSpeedLevel++;
-        updateShopUI();
-    });
-
-    // 8. 綁定「召喚小夥伴」升級
-    document.getElementById('btn-summon').addEventListener('click', () => {
-        if (summonLevel >= butter_cookie_MAX_SUMMON_LEVEL) return;
-        const cost = Math.floor(200 * Math.pow(8, summonLevel));
-        if (window.butter_cookie_count < cost) return;
-        window.butter_cookie_count -= cost;
-        summonLevel++;
-        updateShopUI();
-        spawnCompanion(window.innerWidth, window.innerHeight);
-    });
-    // 綁定「解鎖巧克力餅乾」
-    document.getElementById('btn-choco').addEventListener('click', () => {
-        if (cookie_chocolate_unlockLevel >= butter_cookie_MAX_CHOCO_UNLOCK_LEVEL) return;
-        const cost = 1e4; // 10,000
-        if (window.butter_cookie_count < cost) return;
-        window.butter_cookie_count -= cost;
-        cookie_chocolate_unlockLevel++;
-        updateShopUI();
-        // 目前先不做解鎖後效果，之後在這裡掛鉤真正的解鎖行為
-    });
-
-    // 9. 商店開關邏輯
+    // 商店開關邏輯
     const popup = document.getElementById('popup');
     const openBtn = document.getElementById('openButton');
     const closeBtn = document.querySelector('#popup .closeBtn');
@@ -285,10 +109,4 @@ window.addEventListener('DOMContentLoaded', () => {
             document.body.style.overflow = '';
         }
     });
-    // 初始化
-    window.addEventListener('DOMContentLoaded', () => {
-        window.cookie_onscreen = window.cookie_onscreen || 0;
-        cookie_onscreen_updateHUD();
-    });
-
-}); // 這裡一定要有這個閉合
+});
