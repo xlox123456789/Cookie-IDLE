@@ -8,7 +8,8 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <link rel="stylesheet" href="css/style.css" />
+  <!-- v1.9 -->
+  <link rel="stylesheet" href="css/style.css?v=1.9" />
 </head>
 
 <body>
@@ -29,7 +30,6 @@
       <!-- 升級：出現次數 -->
       <div class="shop-item">
         <div class="shop-label">奶油餅乾出現數量</div>
-        <!-- 顯示 LV.當前 / 最大 -->
         <div class="shop-level">
           LV.<span id="lv-count">0</span> / 30
         </div>
@@ -62,7 +62,7 @@
         <div>花費 <span id="cost-summon">200</span> 餅乾</div>
         <button id="btn-summon">+1</button>
       </div>
-      <!-- 解鎖巧克力餅乾 -->
+      <!-- 解鎖巧克力餅乾（效果尚未實作，本次版本先不動） -->
       <div class="shop-item">
         <div class="shop-label">解鎖巧克力餅乾</div>
         <div class="shop-level">LV.<span id="lv-choco">0</span> / 1</div>
@@ -72,11 +72,10 @@
     </div>
   </div>
 
-
-
-  <script type="module" src="js/utils.js"></script>
-  <script type="module" src="js/core.js"></script>
-  <script type="module" src="js/ui.js"></script>
+  <!-- v1.9：只需要載入 core.js 與 ui.js 這兩個進入點，
+       其餘模組（utils/state/config/hud/eater/companion/save）都會透過 import 自動載入 -->
+  <script type="module" src="js/core.js?v=1.9"></script>
+  <script type="module" src="js/ui.js?v=1.9"></script>
 </body>
 
 </html>

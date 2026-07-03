@@ -1,22 +1,17 @@
-// js/core.js
+// js/core.js — 主遊戲迴圈（v1.9）
+// 變更重點：
+//  1. 全域變數統一改用 Game（見 state.js），不再散落一堆 window.xxx。
+//  2. HUD 更新邏輯抽到 hud.js，避免與 ui.js 互相 import 造成循環依賴。
+//  3. 真正接上 save.js，啟動時會先讀檔、遊戲開始後會啟動自動存檔。
 
-import { startAutoSave, loadGame, saveGame } from './save.js';
-import { formatNumber } from './utils.js';
+import { Game } from './state.js';
+import { SPAWN_BASE_INTERVAL } from './config.js';
 import { Eater } from './eater.js';
-import { companions, spawnCompanion } from './companion.js';
-import { cookie_onscreen_track_spawn, cookie_onscreen_track_despawn } from './ui.js';
-// 全域
-window.butter_cookie_count = 0;
-window.butter_cookie_CountLevel = 0;
-window.butter_cookie_butterSpeedLevel = 0;
-window.butter_cookie_butterGainLevel = 0;
-window.eatSpeedLevel = 0;
-window.summonLevel = 0;
-window.companions = companions;
-window.spawnCompanion = spawnCompanion;
-window.cookie_chocolate_unlockLevel = 0;
+import { spawnCompanion } from './companion.js';
+import { trackCookieSpawn, trackCookieDespawn, updateCookieCountHUD } from './hud.js';
+import { startAutoSave } from './save.js';
 
-// Canvas
+// ---- Canvas 初始化 ----
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let width = innerWidth, height = innerHeight;
@@ -26,15 +21,19 @@ addEventListener('resize', () => {
     canvas.width = width; canvas.height = height;
 });
 
-// Cookie 圖
-export const butter_cookie_cookieImg = new Image();
-butter_cookie_cookieImg.src = 'cookie/cookie_butter.png';
+// ---- 餅乾 ----
+export const cookieImgButter = new Image();
+cookieImgButter.src = 'cookie/cookie_butter.png';
 
-export class butter_cookie_Cookie {
-    constructor(x, y) {
+export class Cookie {
+    constructor(x, y, type = 'butter') {
         this.x = x; this.y = y;
+        this.type = type; // 目前只有 'butter'，保留欄位供未來巧克力餅乾使用
         this.size = 60; this.scale = 1; this.angle = 0;
         this.absorbed = false;
+    }
+    get img() {
+        return cookieImgButter;
     }
     update() {
         const cx = this.x + this.size / 2, cy = this.y + this.size / 2;
@@ -52,59 +51,56 @@ export class butter_cookie_Cookie {
         ctx.translate(cx, cy);
         ctx.rotate(this.angle * Math.PI / 180);
         ctx.scale(this.scale, this.scale);
-        ctx.drawImage(butter_cookie_cookieImg, -this.size / 2, -this.size / 2, this.size, this.size);
+        ctx.drawImage(this.img, -this.size / 2, -this.size / 2, this.size, this.size);
         ctx.restore();
     }
     isGone() { return this.scale <= 0; }
 }
 
-export let butter_cookie_cookies = [];
-export function butter_cookie_spawnCookie() {
-    butter_cookie_cookies.push(new butter_cookie_Cookie(
+let cookies = [];
+
+export function spawnCookie() {
+    cookies.push(new Cookie(
         Math.random() * (width - 60),
         Math.random() * (height - 60)
     ));
-    cookie_onscreen_track_spawn()
-}
-export function butter_cookie_spawnMultipleCookies() {
-    const n = (window.butter_cookie_CountLevel || 0) + 1;
-    for (let i = 0; i < n; i++)butter_cookie_spawnCookie();
+    trackCookieSpawn();
 }
 
-const BASE_INTERVAL = 10000;
+export function spawnCookieBatch() {
+    const n = Game.levels.count + 1;
+    for (let i = 0; i < n; i++) spawnCookie();
+}
+
 let spawnTimeoutId = null;
 export function scheduleNextSpawn() {
     if (spawnTimeoutId !== null) clearTimeout(spawnTimeoutId);
-    const lvl = window.butter_cookie_butterSpeedLevel || 0;
-    const interval = BASE_INTERVAL / (1 + lvl * 0.01);
+    const interval = SPAWN_BASE_INTERVAL / (1 + Game.levels.speed * 0.01);
     spawnTimeoutId = setTimeout(() => {
-        butter_cookie_spawnMultipleCookies(); scheduleNextSpawn();
+        spawnCookieBatch();
+        scheduleNextSpawn();
     }, interval);
 }
 
-// 主角
-const mainEater = new Eater('skin/man1.png', 40);
-window.hero = mainEater; // ← 讓 save.js 能把同伴目標設為主角
+// ---- 主角 ----
+const hero = new Eater('skin/man1.png', 40);
+Game.hero = hero;
 
 let mouseX = width / 2, mouseY = height / 2;
 let prevX = mouseX, prevY = mouseY;
-mainEater.setPosition(mouseX, mouseY);   // ★ 主角一開始就不在 (0,0)
+hero.setPosition(mouseX, mouseY);
 canvas.addEventListener('mousemove', e => {
-    // 立刻設定主角 targetAngle
     const dx = e.clientX - prevX;
     const dy = e.clientY - prevY;
-    if (dx !== 0 || dy !== 0) {
-        mainEater.setDirection(dx, dy);
-    }
+    if (dx !== 0 || dy !== 0) hero.setDirection(dx, dy);
     prevX = e.clientX;
     prevY = e.clientY;
 
-    // 更新滑鼠位置
     mouseX = e.clientX;
     mouseY = e.clientY;
 });
 
-// 主迴圈
+// ---- 主迴圈 ----
 let lastTime = performance.now();
 function gameLoop() {
     const now = performance.now();
@@ -113,58 +109,56 @@ function gameLoop() {
 
     ctx.clearRect(0, 0, width, height);
 
-    butter_cookie_cookies.forEach((c, i) => {
+    cookies.forEach((c, i) => {
         c.update();
         if (!c.absorbed && !c.eater) {
-            if (mainEater.tryAbsorb(c, mouseX, mouseY, window.eatSpeedLevel)) c.absorbed = true;
-            companions.forEach(cp => {
-                if (!c.absorbed && !c.eater && cp.tryAbsorb(c, cp.x, cp.y, window.eatSpeedLevel)) {
+            if (hero.tryAbsorb(c, mouseX, mouseY, Game.levels.eat)) c.absorbed = true;
+            Game.companions.forEach(cp => {
+                if (!c.absorbed && !c.eater && cp.tryAbsorb(c, cp.x, cp.y, Game.levels.eat)) {
                     c.absorbed = true;
                 }
             });
         }
         if (c.absorbed && c.eater) {
-            c.eater.updateAbsorb(c, window.eatSpeedLevel);
+            c.eater.updateAbsorb(c, Game.levels.eat);
             if (c.isGone()) {
-                butter_cookie_cookies.splice(i, 1);
-                cookie_onscreen_track_despawn();
-                const gain = 1 + (window.butter_cookie_butterGainLevel || 0);
-                window.butter_cookie_count += gain;
-                document.getElementById('count').textContent = formatNumber(window.butter_cookie_count);
+                cookies.splice(i, 1);
+                trackCookieDespawn();
+                const gain = 1 + Game.levels.gain;
+                Game.cookieCount += gain;
+                updateCookieCountHUD();
             }
         }
         c.draw();
     });
 
     // 主角平滑旋轉 + 繪製
-    mainEater.smoothRotate(0.2);
-    mainEater.setPosition(mouseX, mouseY);
-    mainEater.draw(ctx);
+    hero.smoothRotate(0.2);
+    hero.setPosition(mouseX, mouseY);
+    hero.draw(ctx);
 
-    // 更新 & 繪製夥伴（瞬間朝向）
-    companions.forEach(cp => {
+    // 更新 & 繪製同伴（瞬間朝向）
+    Game.companions.forEach(cp => {
         cp.update(delta);
-        // 小夥伴瞬間面向移動方向
-        // angle 已由 update() 保持為移動方向
         cp.draw(ctx);
     });
 
     requestAnimationFrame(gameLoop);
 }
 
-// 啟動
+// ---- 啟動 ----
 export function startGame() {
-    butter_cookie_spawnMultipleCookies();
+    spawnCookieBatch();
     scheduleNextSpawn();
     lastTime = performance.now();
     gameLoop();
+    startAutoSave();
 }
-butter_cookie_cookieImg.onload = startGame;
-window.scheduleNextSpawn = scheduleNextSpawn;
+cookieImgButter.onload = startGame;
 
-// 召喚
+// ---- 召喚（提供給 ui.js 以外的地方使用；ui.js 目前直接呼叫 companion.js 的 spawnCompanion）----
 export function summonPartner() {
-    if (companions.length < window.summonLevel) {
+    if (Game.companions.length < Game.levels.summon) {
         spawnCompanion(width, height);
     }
 }
