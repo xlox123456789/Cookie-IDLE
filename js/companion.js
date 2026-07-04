@@ -1,5 +1,5 @@
 // js/companion.js — 同伴（小夥伴）AI
-// v1.9：同伴陣列統一改存放在 Game.companions，不再另外維護一份 companions 陣列。
+// v1.19：同伴陣列統一改存放在 Game.companions，不再另外維護一份 companions 陣列。
 
 import { Eater } from './eater.js';
 import { Game } from './state.js';

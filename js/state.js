@@ -1,4 +1,4 @@
-// js/state.js — 遊戲全域狀態（v1.9 新增）
+// js/state.js — 遊戲全域狀態（v1.19 新增）
 // 統一所有可變的遊戲資料，取代原本散落各處的 window.xxx 全域變數。
 
 export const Game = {

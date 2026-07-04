@@ -3,6 +3,7 @@
 //  1. 全域變數統一改用 Game（見 state.js），不再散落一堆 window.xxx。
 //  2. HUD 更新邏輯抽到 hud.js，避免與 ui.js 互相 import 造成循環依賴。
 //  3. 真正接上 save.js，啟動時會先讀檔、遊戲開始後會啟動自動存檔。
+//  4. v1.19：修正「畫面上餅乾數量」即時顯示會跑掉的 bug（見下方 gameLoop 註解）。
 
 import { Game } from './state.js';
 import { SPAWN_BASE_INTERVAL } from './config.js';
@@ -109,7 +110,14 @@ function gameLoop() {
 
     ctx.clearRect(0, 0, width, height);
 
-    cookies.forEach((c, i) => {
+    // v1.19 修正：原本用 cookies.forEach(...) 同時在裡面 splice 移除餅乾，
+    // 但 forEach 一開始就記住了陣列長度，過程中若同一幀有兩顆以上的餅乾被吃完，
+    // 陣列會被提前縮短，導致後面的索引對不上、有些餅乾被跳過或重複計算，
+    // 「畫面上餅乾數量」的即時顯示因此會跟實際數量兜不起來（甚至偶爾整個迴圈中斷）。
+    // 改成「由後往前」的一般 for 迴圈：從陣列尾端開始判斷、移除，
+    // 前面還沒處理到的索引不會因為後面被移除而跑掉，數量才會永遠正確。
+    for (let i = cookies.length - 1; i >= 0; i--) {
+        const c = cookies[i];
         c.update();
         if (!c.absorbed && !c.eater) {
             if (hero.tryAbsorb(c, mouseX, mouseY, Game.levels.eat)) c.absorbed = true;
@@ -127,10 +135,11 @@ function gameLoop() {
                 const gain = 1 + Game.levels.gain;
                 Game.cookieCount += gain;
                 updateCookieCountHUD();
+                continue; // 這顆已經移除，不需要再畫
             }
         }
         c.draw();
-    });
+    }
 
     // 主角平滑旋轉 + 繪製
     hero.smoothRotate(0.2);

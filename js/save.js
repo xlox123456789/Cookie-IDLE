@@ -1,4 +1,4 @@
-// js/save.js — 本地存讀檔（v1.9：修好，正式接上 localStorage 自動存檔）
+// js/save.js — 本地存讀檔（v1.19：修好，正式接上 localStorage 自動存檔）
 //
 // 使用瀏覽器 localStorage（不是傳統的 HTTP Cookie）。
 // localStorage 容量大（一般 5MB 以上）且只存在使用者這台電腦的瀏覽器裡，
