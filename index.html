@@ -73,9 +73,14 @@
   </div>
 
   <!-- v1.19：只需要載入 core.js 與 ui.js 這兩個進入點，
-       其餘模組（utils/state/config/hud/eater/companion/save）都會透過 import 自動載入 -->
-  <script type="module" src="js/core.js?v=1.19"></script>
-  <script type="module" src="js/ui.js?v=1.19"></script>
+       其餘模組（utils/state/config/hud/eater/companion/save）都會透過 import 自動載入。
+       注意：type="module" 的 script 不能像一般 <script> 一樣加 ?v= 版本參數來破快取，
+       因為瀏覽器會把「網址（含問號參數）」當成模組的唯一身分，
+       這裡若加了 ?v=，跟 ui.js 內部 import './core.js'（沒有問號）網址對不上，
+       就會被當成兩個不同模組，core.js 整份程式碼因此重複執行兩次，
+       導致畫面上餅乾數量顯示成兩倍——這正是這次修正的問題根源。 -->
+  <script type="module" src="js/core.js"></script>
+  <script type="module" src="js/ui.js"></script>
 </body>
 
 </html>
